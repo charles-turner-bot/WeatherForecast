@@ -92,3 +92,19 @@ Some checkpoints require **NGC / Hugging Face auth**; note any token setup here 
   generative-ensemble baseline to benchmark the autoencoder/latent idea against.
 - **Verification:** obs data sources `GHCNHourly`, `IEM_ASOS`, `ISD` are available — Perth station
   obs without waiting on BoM.
+
+## Model compatibility on the P40 (empirical, 2026-09-05)
+
+Hard-won from getting Phase 1 running. The P40 (Pascal, 24 GB) + CUDA-13-era package
+ecosystem is hostile to most of the zoo. What we found:
+
+| Model | Status | Why |
+|---|---|---|
+| **FCN** (classic FourCastNet, AFNO) | ✅ **works on GPU**, ~1 s/step, 0.25° | pure-torch via `nvidia-physicsnemo`. **Load-bearing pins:** `nvidia-physicsnemo<2.0` (2.0 imports `warp.context`, removed in warp-lang 1.17 → ImportError). Needs `r500`/`r850` **relative humidity** inputs → **use GFS/IFS**; ARCO/ERA5 lacks RH (derive via `DerivedRH` for reproducible ERA5 runs — TODO). |
+| **FCN3 / SFNO** | ❌ blocked | require `makani`, not pip-installable in this env. |
+| **Pangu** (24/6/3) | ⚠️ installs (ONNX) & runs on GPU but **OOMs** | single-forward-pass peak ~2 GB over 24 GB (a 1.85 GB tensor). Runs on **CPU** (slow). Can't shard one ONNX model across the 2 P40s. **Pin `onnxruntime-gpu==1.22.0`** (CUDA 12; latest 1.29 targets CUDA 13, which the P40 can't use and whose libs aren't present). |
+| **GraphCast** | ❌ blocked | needs `jax[cuda13]`; **CUDA 13 dropped Pascal**. |
+| **DLWP** | (untried) | pure-torch, should fit — coarse/HEALPix fallback if needed. |
+
+**Takeaway:** on this box, **classic FCN + GFS is the working GPU path** for a 0.25° global backbone.
+Anything heavier (Pangu, FCN3, GraphCast) needs a bigger/newer GPU. Config default is FCN.

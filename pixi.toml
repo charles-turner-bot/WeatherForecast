@@ -48,7 +48,18 @@ gcsfs = "*"
 # from the CUDA 12.4 wheel index. See plan/01_setup.md for the reasoning/fallbacks.
 [pypi-dependencies]
 torch = { version = "==2.5.1", index = "https://download.pytorch.org/whl/cu124" }
-earth2studio = "*"
+# pangu: ONNX stack (Pascal-friendly), our first working model. NOTE: the fcn3
+# extra is unsatisfiable here — it requires NVIDIA `makani`, not pip-installable
+# in this env (and it assumes tensor-core hardware the P40s lack). See
+# plan/01_setup.md and plan/11_phase1_tasks.md.
+earth2studio = { version = "*", extras = ["pangu", "fcn"] }
+# Pin onnxruntime to a CUDA-12 build: the latest (1.29) targets CUDA 13, whose
+# libs we don't have AND which dropped Pascal (sm_61) support. CUDA 12 supports
+# the P40s, and torch already provides the cu12 .so.12 libraries in this env.
+onnxruntime-gpu = "==1.22.0"
+# physicsnemo 2.0 calls warp's removed `wp.context` at import (breaks classic FCN
+# on warp-lang 1.17). Pin below 2.0 to dodge the new radius_search/warp path.
+nvidia-physicsnemo = ">=1.0.1,<2.0.0"
 
 # Model checkpoints & data cache live on the big disk, out of git (.gitignore).
 [activation.env]
@@ -59,6 +70,7 @@ lab = "jupyter lab --no-browser"
 test = "python tests/test_metrics.py"
 test-plots = "python tests/test_plotting.py"
 forecast = "python scripts/forecast.py"
+plot = "python scripts/plot_forecast.py"
 gpu-check = "python -c \"import torch; print('torch', torch.__version__); print('cuda', torch.cuda.is_available()); print([torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())])\""
 
 # ---------------------------------------------------------------------------

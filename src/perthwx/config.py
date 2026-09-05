@@ -23,6 +23,10 @@ DEFAULT_VARIABLES: list[str] = ["t2m", "u10m", "v10m", "msl", "z500", "t850"]
 # Models known to the driver, with their native forecast step in hours. Used to
 # convert a desired lead time in days into nsteps.
 MODEL_STEP_HOURS: dict[str, int] = {
+    "FCN": 6,          # classic FourCastNet (AFNO) — fits the P40 in FP32
+    "Pangu24": 24,
+    "Pangu6": 6,
+    "Pangu3": 3,
     "FCN3": 6,
     "SFNO": 6,
     "GraphCastOperational": 6,
@@ -47,9 +51,9 @@ class ForecastConfig:
     """
 
     init_time: str = "2022-01-01T00:00:00"
-    model: str = "FCN3"
+    model: str = "FCN"
     source: str = "arco"
-    lead_days: float = 10.0
+    lead_days: float = 7.0
     variables: list[str] = field(default_factory=lambda: list(DEFAULT_VARIABLES))
     out_path: str = "outputs/forecast.zarr"
     device: str = "cuda:0"

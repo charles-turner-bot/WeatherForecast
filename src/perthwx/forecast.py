@@ -24,9 +24,21 @@ from .config import PERTH_DOMAIN, ForecastConfig
 
 def _model_registry() -> dict:
     """Map config model names to earth2studio prognostic classes (lazy import)."""
-    from earth2studio.models.px import FCN3, SFNO, GraphCastOperational
+    from earth2studio.models.px import (
+        FCN,
+        FCN3,
+        SFNO,
+        GraphCastOperational,
+        Pangu24,
+        Pangu6,
+        Pangu3,
+    )
 
     return {
+        "FCN": FCN,
+        "Pangu24": Pangu24,
+        "Pangu6": Pangu6,
+        "Pangu3": Pangu3,
         "FCN3": FCN3,
         "SFNO": SFNO,
         "GraphCastOperational": GraphCastOperational,
@@ -43,6 +55,49 @@ def _data_source(source: str):
     if s == "gfs":
         return GFS()
     raise ValueError(f"Unknown source {source!r}; use 'arco' or 'gfs'.")
+
+
+def _patch_pangu_low_memory() -> None:
+    """Make Pangu's onnxruntime session memory-frugal so it fits a 24 GB P40.
+
+    earth2studio's default CUDA session uses ``arena_extend_strategy`` =
+    kNextPowerOfTwo, which over-allocates in power-of-two chunks and OOMs Pangu
+    (a heavy 3-D transformer) on 24 GB. We replace the session factory that the
+    pangu module already imported with one that requests memory as-needed and
+    caps cuDNN conv workspace.
+    """
+    import os
+    import onnxruntime as ort
+    import torch
+    from earth2studio.models.px import pangu as _pangu
+
+    def _frugal(onnx_file: str, device: "torch.device" = torch.device("cpu", 0)):
+        opts = ort.SessionOptions()
+        opts.enable_cpu_mem_arena = False
+        # Re-enable memory pattern + reuse: our grid is fixed-shape across the
+        # autoregressive steps, so buffers can be reused instead of accumulating
+        # (earth2studio disables these, which OOMs Pangu on 24 GB by step 4).
+        opts.enable_mem_pattern = True
+        opts.enable_mem_reuse = True
+        opts.intra_op_num_threads = 1
+        opts.log_severity_level = 3
+        os.stat(onnx_file)
+        if device.type == "cuda":
+            idx = torch.cuda.current_device() if device.index is None else device.index
+            providers = [
+                ("CUDAExecutionProvider", {
+                    "device_id": idx,
+                    "arena_extend_strategy": "kSameAsRequested",
+                    "cudnn_conv_use_max_workspace": "0",
+                    "cudnn_conv_algo_search": "HEURISTIC",
+                }),
+                "CPUExecutionProvider",
+            ]
+        else:
+            providers = ["CPUExecutionProvider"]
+        return ort.InferenceSession(onnx_file, sess_options=opts, providers=providers)
+
+    _pangu.create_ort_session = _frugal
 
 
 def load_model(name: str, device: str):
@@ -96,6 +151,8 @@ def run_forecast(cfg: ForecastConfig, dry_run: bool = False) -> str | None:
         return None
 
     device = torch.device(cfg.device)
+    if cfg.model.startswith("Pangu") and device.type == "cuda":
+        _patch_pangu_low_memory()
     model = load_model(cfg.model, cfg.device)
 
     from earth2studio import run
