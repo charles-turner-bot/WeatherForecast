@@ -1,0 +1,66 @@
+[workspace]
+name = "WeatherForecast"
+version = "0.1.0"
+description = "AI weather forecasting for Perth using NVIDIA earth2studio (global forecast + km-scale downscaling + ensembles)"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+# ---------------------------------------------------------------------------
+# Base environment: geospatial + data stack that installs cleanly on this box.
+# The heavy DL layer (PyTorch + earth2studio) is added deliberately in Phase 0
+# of the plan (see plan/01_setup.md) because of Pascal (sm_61) / CUDA specifics
+# on the 2x Tesla P40 GPUs. Keeping them separate means `pixi install` here
+# always gives a working analysis env even before the GPU stack is sorted.
+# ---------------------------------------------------------------------------
+
+[dependencies]
+python = "3.12.*"
+# Core scientific / array
+numpy = "*"
+scipy = "*"
+pandas = "*"
+xarray = "*"
+dask = "*"
+# Weather/climate IO + formats
+netcdf4 = ">=1.6.4,<1.7.3"   # earth2studio requires <1.7.3
+h5netcdf = "*"
+zarr = "*"
+h5py = "*"
+cfgrib = "*"          # read GRIB (GFS/IFS/GEFS)
+eccodes = "*"
+# Regridding + geospatial
+xesmf = "*"           # conservative/bilinear regridding (ESMF)
+cartopy = "*"
+pyproj = "*"
+# Viz + notebooks
+matplotlib = "*"
+jupyterlab = "*"
+ipykernel = "*"
+# Utilities
+tqdm = "*"
+pooch = "*"
+fsspec = "*"
+aiohttp = "*"        # async http for cloud data stores
+s3fs = "*"           # ARCO-ERA5 / cloud zarr access
+gcsfs = "*"
+
+# DL stack: PyTorch pinned to a build that still ships Pascal (sm_61) kernels,
+# from the CUDA 12.4 wheel index. See plan/01_setup.md for the reasoning/fallbacks.
+[pypi-dependencies]
+torch = { version = "==2.5.1", index = "https://download.pytorch.org/whl/cu124" }
+earth2studio = "*"
+
+# Model checkpoints & data cache live on the big disk, out of git (.gitignore).
+[activation.env]
+EARTH2STUDIO_CACHE = "/home/ct/WeatherForecast/.cache/earth2studio"
+
+[tasks]
+lab = "jupyter lab --no-browser"
+gpu-check = "python -c \"import torch; print('torch', torch.__version__); print('cuda', torch.cuda.is_available()); print([torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())])\""
+
+# ---------------------------------------------------------------------------
+# The DL / earth2studio layer is intentionally NOT declared here yet.
+# See plan/01_setup.md for the exact, verified install path (PyTorch build that
+# supports Pascal sm_61, then `pip install earth2studio[...]` extras) and the
+# fallbacks if the default CUDA-13 wheels don't cooperate with the P40s.
+# ---------------------------------------------------------------------------

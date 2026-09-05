@@ -1,0 +1,12 @@
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+# model checkpoints, data caches, forecast outputs
+.cache/
+data/
+outputs/
+*.zarr
+*.nc
+*.grib
+*.grib2
