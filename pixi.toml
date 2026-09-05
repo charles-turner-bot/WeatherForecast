@@ -68,6 +68,8 @@ EARTH2STUDIO_CACHE = "/home/ct/WeatherForecast/.cache/earth2studio"
 [tasks]
 lab = "jupyter lab --no-browser"
 test = "python tests/test_metrics.py"
+test-verification = "python tests/test_verification.py"
+verify = "python scripts/verify_forecast.py"
 test-plots = "python tests/test_plotting.py"
 forecast = "python scripts/forecast.py"
 plot = "python scripts/plot_forecast.py"

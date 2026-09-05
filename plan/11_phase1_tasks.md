@@ -10,10 +10,10 @@ downloads, model-specific extras) and validation — not lines of code.
 | T1 | ✅ Config module — Perth domain, variable set, model registry | S | done | — |
 | T2 | ✅ Forecast driver — earth2studio `data → model → io`, `run.deterministic` rollout | M | done | T1 |
 | T3 | ✅ **First forecast on disk** — FCN (classic) 7-day from GFS, on GPU (~1 min) | M | done | T2 |
-| T4 | **GraphCast** as 2nd model (config switch, its deps + weights) | S–M | **me** | T2, T3 |
-| T5 | Metrics module — RMSE, bias, MAE, ACC, CRPS, rank hist, spread–skill | M | **qwen** → I unit-test | — |
-| T6 | Plotting module — cartopy maps of t2m/mslp/wind over Perth | M | **qwen** draft → I refine | T3 |
-| T7 | Obs verification — station obs source (IEM_ASOS/ISD/GHCN) matched to forecast | M | **me** (data API) | T3, T5 |
+| T4 | **Blocked on current stack** — **GraphCast** as 2nd model (config switch, its deps + weights) | S–M | **me** | T2, T3 |
+| T5 | ✅ Metrics module — RMSE, bias, MAE, ACC, CRPS, rank hist, spread–skill | M | **qwen** → I unit-test | — |
+| T6 | ✅ Plotting module — cartopy maps of t2m/mslp/wind over Perth | M | **qwen** draft → I refine | T3 |
+| T7 | ✅ Obs verification — station obs source (IEM_ASOS/ISD/GHCN) matched to forecast | M | **me** (data API) | T3, T5 |
 | T8 | Validation notebook + written readout | M | me integrate, qwen drafts prose | T5–T7 |
 
 ## Delegation rationale
@@ -42,3 +42,13 @@ src/perthwx/
   plotting.py    # T6
   verification.py# T7  (me)
 ```
+
+## Current next step (2026-09-05)
+
+T5/T6 are implemented and tested. T7 now has a station verification command and
+offline matching tests; see [12_station_verification.md](12_station_verification.md).
+T4 remains blocked by the installed JAX/CUDA stack (see Phase 0 compatibility notes).
+Next: enable reproducible historical FCN initial conditions from ERA5 (derive the
+required relative humidity inputs), then run historical cases and integrate T8
+with ERA5/persistence baselines. The existing September 4 forecast only has early
+leads available for station verification today; Phase 1 is not yet complete.
