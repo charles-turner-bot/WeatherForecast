@@ -1,3 +1,9 @@
+# python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
 # pixi environments
 .pixi/*
 !.pixi/config.toml
