@@ -7,9 +7,9 @@ downloads, model-specific extras) and validation — not lines of code.
 
 | # | Task | Size | Owner | Depends on |
 |---|---|---|---|---|
-| T1 | Config module — Perth domain, variable set, model registry | S | qwen draft → I finalize | — |
-| T2 | Forecast driver — earth2studio `data → model → io`, `run.deterministic` rollout | M | **me** (API-exact) | T1 |
-| T3 | First **FCN3** run → Zarr output (weights/extras/debug, 10-day) | M | **me** (runtime) | T2 |
+| T1 | ✅ Config module — Perth domain, variable set, model registry | S | done | — |
+| T2 | ✅ Forecast driver — earth2studio `data → model → io`, `run.deterministic` rollout | M | done | T1 |
+| T3 | ✅ **First forecast on disk** — FCN (classic) 7-day from GFS, on GPU (~1 min) | M | done | T2 |
 | T4 | **GraphCast** as 2nd model (config switch, its deps + weights) | S–M | **me** | T2, T3 |
 | T5 | Metrics module — RMSE, bias, MAE, ACC, CRPS, rank hist, spread–skill | M | **qwen** → I unit-test | — |
 | T6 | Plotting module — cartopy maps of t2m/mslp/wind over Perth | M | **qwen** draft → I refine | T3 |

@@ -11,7 +11,11 @@ __pycache__/
 # model checkpoints, data caches, forecast outputs
 .cache/
 data/
-outputs/
+# ignore forecast data under outputs/, but TRACK rendered figures
+/outputs/*
+!/outputs/figures/
+/outputs/figures/*
+!/outputs/figures/*.png
 *.zarr
 *.nc
 *.grib
