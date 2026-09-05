@@ -34,3 +34,18 @@ set via `EARTH2STUDIO_CACHE` in `pixi.toml`.
 Part of a broader local AI-weather exploration (see
 [`plan/10_model_landscape.md`](plan/10_model_landscape.md)). Built on NVIDIA earth2studio, with
 Australian km-scale data (BARRA) from the BoM / ACCESS ecosystem.
+
+## Station verification
+
+```bash
+pixi run verify --zarr outputs/fcn_gfs_7day.zarr
+pixi run verify --zarr outputs/fcn_gfs_7day.zarr \
+  --observations outputs/verification/observations.csv --outdir outputs/verification-replay
+pixi run test-verification
+```
+
+T7 compares the nearest forecast grid cell to Perth Airport (YPPH) IEM reports.
+It writes SI-unit observations, matched pairs, RMSE/bias/MAE with coverage counts,
+scores by lead, and matching metadata. Default tolerance is ±30 minutes; lead zero
+is retained in pairs but excluded from scores. Future or missing observations stay
+unmatched. See [verification notes](plan/12_station_verification.md) for limitations.
