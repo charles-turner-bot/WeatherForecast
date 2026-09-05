@@ -7,13 +7,17 @@ earth2studio imports are done lazily inside functions so that importing this
 module (and ``perthwx.config``) stays cheap and side-effect-free.
 
 Run it:
-    pixi run forecast --model FCN3 --init 2022-01-01T00:00:00 --lead-days 10
+    pixi run forecast --model FCN --init 2022-01-01T00:00:00 --lead-days 10
     pixi run forecast --dry-run          # validate wiring without downloading weights
 """
 from __future__ import annotations
 
 import argparse
 from collections import OrderedDict
+from dataclasses import asdict
+from datetime import datetime, timezone
+from importlib.metadata import version
+import json
 from pathlib import Path
 
 import numpy as np
@@ -51,7 +55,8 @@ def _data_source(source: str):
 
     s = source.lower()
     if s in ("arco", "era5"):
-        return ARCO()
+        from .data import ERA5WithRH
+        return ERA5WithRH(ARCO())
     if s == "gfs":
         return GFS()
     raise ValueError(f"Unknown source {source!r}; use 'arco' or 'gfs'.")
@@ -131,12 +136,6 @@ def run_forecast(cfg: ForecastConfig, dry_run: bool = False) -> str | None:
 
     data = _data_source(cfg.source)
     out = Path(cfg.out_path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-
-    from earth2studio.io import ZarrBackend
-
-    io = ZarrBackend(file_name=str(out), backend_kwargs={"overwrite": True})
-    output_coords = OrderedDict(variable=np.array(cfg.variables))
 
     if dry_run:
         pkg = reg[cfg.model].load_default_package()
@@ -150,22 +149,45 @@ def run_forecast(cfg: ForecastConfig, dry_run: bool = False) -> str | None:
         print(f"  out_path     : {out}")
         return None
 
+    if out.exists():
+        raise FileExistsError(f"Forecast output already exists: {out}; choose a new --out path")
+    nsteps = cfg.nsteps
     device = torch.device(cfg.device)
     if cfg.model.startswith("Pangu") and device.type == "cuda":
         _patch_pangu_low_memory()
     model = load_model(cfg.model, cfg.device)
 
+    output_coords = OrderedDict(variable=np.array(cfg.variables))
+    if cfg.crop_output:
+        native = model.output_coords(model.input_coords())
+        for dim, bounds in cfg.domain.items():
+            coord = native[dim]
+            output_coords[dim] = coord[(coord >= min(bounds)) & (coord <= max(bounds))]
+            if not len(output_coords[dim]):
+                raise ValueError(f"Output domain has no model {dim} points")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    from earth2studio.io import ZarrBackend
+    io = ZarrBackend(file_name=str(out), backend_kwargs={"overwrite": False})
     from earth2studio import run
 
     run.deterministic(
         [cfg.init_time],
-        cfg.nsteps,
+        nsteps,
         model,
         data,
         io,
         output_coords=output_coords,
         device=device,
     )
+    metadata = dict(
+        config=asdict(cfg),
+        completed_utc=datetime.now(timezone.utc).isoformat(),
+        earth2studio=version("earth2studio"),
+        torch=version("torch"),
+        rh_method=("earth2studio.models.dx.DerivedRH"
+                   if cfg.source.lower() in ("arco", "era5") else None),
+    )
+    (out / "perthwx-run.json").write_text(json.dumps(metadata, indent=2) + "\n")
     return str(out)
 
 
@@ -188,18 +210,19 @@ def crop_to_perth(
 
 def _parse_args(argv: list[str] | None = None) -> ForecastConfig:
     p = argparse.ArgumentParser(description="Run a Perth AI weather forecast.")
-    p.add_argument("--model", default="FCN3")
+    p.add_argument("--model", default="FCN")
     p.add_argument("--source", default="arco", help="arco (ERA5) | gfs")
     p.add_argument("--init", dest="init_time", default="2022-01-01T00:00:00")
     p.add_argument("--lead-days", type=float, default=10.0)
     p.add_argument("--variables", nargs="+", default=None)
     p.add_argument("--out", dest="out_path", default="outputs/forecast.zarr")
     p.add_argument("--device", default="cuda:0")
+    p.add_argument("--crop-output", action="store_true", help="Store only the Perth domain; inference stays global")
     p.add_argument("--dry-run", action="store_true")
     a = p.parse_args(argv)
     kwargs = dict(
         model=a.model, source=a.source, init_time=a.init_time,
-        lead_days=a.lead_days, out_path=a.out_path, device=a.device,
+        lead_days=a.lead_days, out_path=a.out_path, device=a.device, crop_output=a.crop_output,
     )
     if a.variables:
         kwargs["variables"] = a.variables

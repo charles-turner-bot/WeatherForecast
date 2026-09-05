@@ -11,7 +11,9 @@ fine-tuning, not train-from-scratch.
 
 - **Phase 0 ✅** — `pixi` env, `torch 2.5.1+cu124` on the P40s, `earth2studio 0.18.0`, verified
   ERA5 data fetch over Perth.
-- **Phase 1 ⬜** — global AI forecast (FCN3/GraphCast) over the Perth window, validated vs ERA5/obs.
+- **Phase 1 baseline ✅** — ten-day FCN/ERA5 forecasts for three seasonal cases, scored
+  against ERA5, Perth Airport observations, and persistence; see the [readout](plan/13_historical_validation.md).
+  Broader climatological/event validation and a second model remain open.
 - Later: km-scale downscaling (CorrDiff vs BARRA-C2), ensembles, real-time.
 
 ## The plan
@@ -49,3 +51,16 @@ It writes SI-unit observations, matched pairs, RMSE/bias/MAE with coverage count
 scores by lead, and matching metadata. Default tolerance is ±30 minutes; lead zero
 is retained in pairs but excluded from scores. Future or missing observations stay
 unmatched. See [verification notes](plan/12_station_verification.md) for limitations.
+
+## Historical validation
+
+```bash
+pixi run validate           # run/resume three ten-day FCN/ERA5 cases and score them
+pixi run validate --offline # require saved data; no inference or downloads
+```
+
+The [notebook](notebooks/phase1_validation.ipynb) presents the committed
+[score tables and figures](reports/phase1/). Forecasts and truth snapshots remain
+under `outputs/historical/`. FCN is now the CLI default; ERA5 pressure-level relative
+humidity is derived automatically. Use `--crop-output` with `pixi run forecast`
+to store only the Perth domain. Existing forecast outputs are protected from overwrite.

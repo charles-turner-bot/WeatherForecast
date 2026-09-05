@@ -10,6 +10,14 @@ first "real forecast" milestone and the backbone everything else hangs off.
   the adjacent Indian Ocean (where WA's weather comes from), and enough margin for downscaling
   boundary conditions later. Tune once we see outputs.
 
+## Current implementation (2026-09-05)
+
+Classic **FCN** is the working P40 model. The historical baseline now runs three
+2022 seasonal cases for ten days from ERA5, with DerivedRH supplying r500/r850.
+The [T8 readout](13_historical_validation.md) records ERA5/persistence and Perth
+Airport scores. GraphCast remains blocked on the installed stack; the model
+shortlist below records the original intent rather than the current default.
+
 ## Model choice (global)
 
 earth2studio's zoo evolves; confirm what's available in the installed version, but the sensible
@@ -58,10 +66,10 @@ Surface: `t2m`, `u10m`/`v10m`, `msl`, `tp` (precip if the model provides it). Up
 
 ## Deliverables
 
-- [ ] `src/forecast_global.py` + config; `pixi run forecast` task.
-- [ ] Zarr output for ≥3 case-study dates.
-- [ ] A validation notebook: maps, station-obs comparison, skill scores vs ERA5/persistence.
-- [ ] Short written readout: which model, what skill over Perth, known failure modes.
+- [x] `src/perthwx/forecast.py` + config; `pixi run forecast` task.
+- [x] Zarr output for three fixed seasonal dates (event-focused cases remain future work).
+- [x] Validation notebook: maps, airport comparison, RMSE/bias/MAE vs ERA5/persistence.
+- [x] Written readout: FCN baseline skill and limitations; ACC needs a climatology.
 
 ## Exit criteria
 

@@ -100,7 +100,7 @@ ecosystem is hostile to most of the zoo. What we found:
 
 | Model | Status | Why |
 |---|---|---|
-| **FCN** (classic FourCastNet, AFNO) | ✅ **works on GPU**, ~1 s/step, 0.25° | pure-torch via `nvidia-physicsnemo`. **Load-bearing pins:** `nvidia-physicsnemo<2.0` (2.0 imports `warp.context`, removed in warp-lang 1.17 → ImportError). Needs `r500`/`r850` **relative humidity** inputs → **use GFS/IFS**; ARCO/ERA5 lacks RH (derive via `DerivedRH` for reproducible ERA5 runs — TODO). |
+| **FCN** (classic FourCastNet, AFNO) | ✅ **works on GPU**, ~1 s/step, 0.25° | pure-torch via `nvidia-physicsnemo`. **Load-bearing pins:** `nvidia-physicsnemo<2.0` (2.0 imports `warp.context`, removed in warp-lang 1.17 → ImportError). Needs `r500`/`r850` **relative humidity** inputs → **use GFS/IFS**; ARCO/ERA5 lacks RH; the implemented `ERA5WithRH` adapter derives it via `DerivedRH` for historical runs (see [validation](13_historical_validation.md)). |
 | **FCN3 / SFNO** | ❌ blocked | require `makani`, not pip-installable in this env. |
 | **Pangu** (24/6/3) | ⚠️ installs (ONNX) & runs on GPU but **OOMs** | single-forward-pass peak ~2 GB over 24 GB (a 1.85 GB tensor). Runs on **CPU** (slow). Can't shard one ONNX model across the 2 P40s. **Pin `onnxruntime-gpu==1.22.0`** (CUDA 12; latest 1.29 targets CUDA 13, which the P40 can't use and whose libs aren't present). |
 | **GraphCast** | ❌ blocked | needs `jax[cuda13]`; **CUDA 13 dropped Pascal**. |
