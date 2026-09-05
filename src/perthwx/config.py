@@ -5,6 +5,7 @@ Small, explicit config object consumed by the forecast driver (``forecast.py``).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import math
 
 # Perth point of interest (degrees).
 PERTH_LAT: float = -31.95
@@ -47,16 +48,18 @@ class ForecastConfig:
         variables: Variables to write (subset of the model's outputs).
         out_path: Zarr output path.
         device: Torch device string (e.g. ``"cuda:0"``). P40s run FP32.
-        domain: Crop window applied on read.
+        crop_output: Store only the domain while running global inference.
+        domain: Crop window used on read or when crop_output is True.
     """
 
     init_time: str = "2022-01-01T00:00:00"
     model: str = "FCN"
     source: str = "arco"
-    lead_days: float = 7.0
+    lead_days: float = 10.0
     variables: list[str] = field(default_factory=lambda: list(DEFAULT_VARIABLES))
     out_path: str = "outputs/forecast.zarr"
     device: str = "cuda:0"
+    crop_output: bool = False
     domain: dict[str, tuple[float, float]] = field(
         default_factory=lambda: dict(PERTH_DOMAIN)
     )
@@ -69,4 +72,7 @@ class ForecastConfig:
             raise ValueError(
                 f"Unknown model {self.model!r}; known: {list(MODEL_STEP_HOURS)}"
             )
-        return int(round(self.lead_days * 24 / step_h))
+        steps = self.lead_days * 24 / step_h
+        if not math.isfinite(steps) or steps <= 0 or not math.isclose(steps, round(steps), abs_tol=1e-9):
+            raise ValueError("lead_days must be positive and an exact multiple of the model step")
+        return int(round(steps))

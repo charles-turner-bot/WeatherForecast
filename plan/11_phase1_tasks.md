@@ -14,7 +14,7 @@ downloads, model-specific extras) and validation — not lines of code.
 | T5 | ✅ Metrics module — RMSE, bias, MAE, ACC, CRPS, rank hist, spread–skill | M | **qwen** → I unit-test | — |
 | T6 | ✅ Plotting module — cartopy maps of t2m/mslp/wind over Perth | M | **qwen** draft → I refine | T3 |
 | T7 | ✅ Obs verification — station obs source (IEM_ASOS/ISD/GHCN) matched to forecast | M | **me** (data API) | T3, T5 |
-| T8 | Validation notebook + written readout | M | me integrate, qwen drafts prose | T5–T7 |
+| T8 | ✅ First historical validation notebook + written readout | M | me integrate, qwen drafts prose | T5–T7 |
 
 ## Delegation rationale
 
@@ -45,10 +45,13 @@ src/perthwx/
 
 ## Current next step (2026-09-05)
 
-T5/T6 are implemented and tested. T7 now has a station verification command and
-offline matching tests; see [12_station_verification.md](12_station_verification.md).
-T4 remains blocked by the installed JAX/CUDA stack (see Phase 0 compatibility notes).
-Next: enable reproducible historical FCN initial conditions from ERA5 (derive the
-required relative humidity inputs), then run historical cases and integrate T8
-with ERA5/persistence baselines. The existing September 4 forecast only has early
-leads available for station verification today; Phase 1 is not yet complete.
+T5–T8 have a working first baseline: ERA5-compatible FCN initialization,
+three ten-day seasonal runs, ERA5 and station-observation persistence comparisons,
+a validation notebook, and a [written readout](13_historical_validation.md).
+T4 remains blocked on the installed JAX/CUDA stack. The original two-model target
+above is not met; current results use classic FCN on the P40.
+
+Next: broaden cases and stations, add a diurnally aware persistence/climatology
+baseline and ACC, and investigate airport wind-speed bias before treating the
+forecast as an operational or downscaling-quality product. Confirmed extreme-event
+case studies and Perth Metro remain outstanding.
